@@ -1,0 +1,137 @@
+body {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 400;
+  background-color: #FFFFFF;
+  color: #1A1A1A;
+  margin: 0;
+  padding: 0;
+}
+
+.header {
+  background: linear-gradient(120deg, #1A1A1A 40%, #2864FF);
+  text-align: center;
+  padding: 1em;
+}
+
+.logo {
+  height: 70px;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2em;
+}
+
+h1 {
+  font-weight: 600;
+  font-size: 24px;
+  margin-bottom: 1em;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1em;
+}
+
+.tab {
+  font-family: 'Montserrat', sans-serif;
+  padding: 10px 20px;
+  border: none;
+  background: #EEEEEE;
+  cursor: pointer;
+  font-weight: 500;
+  border-radius: 15px 15px 15px 15px;
+  transition: background-color 0.2s;
+  color: #1A1A1A;
+}
+
+.tab.active {
+  background: #2864FF;
+  color: white;
+}
+
+input[type="text"],
+textarea {
+  font-family: 'Montserrat', sans-serif;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 15px;
+  font-size: 14px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  background: #F9F9F9;
+}
+
+button {
+  font-family: 'Montserrat', sans-serif;
+  background-color: #2864FF;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  color: white;
+  background-color: #1A4FD0;
+}
+
+#result {
+  margin-top: 1.5rem;
+  font-weight: bold;
+}
+
+#tag-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid #DDD;
+  border-radius: 15px;
+  overflow: hidden;
+  background-color: var(--white);
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+thead {
+  background-color: var(--gray-bg);
+}
+
+th, td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #EEE;
+  text-align: left;
+  color: var(--main-text);
+}
+
+tr.found {
+  background-color: #EEE;
+}
+
+tr.not-found {
+  background-color: #FFFFFF;
+}
+
+.custom-input {
+  width: 100%;
+  padding: 8px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #EEEEEE;
+  box-sizing: border-box;
+}
+
+.info-message {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #e7f3ff;
+  border-left: 4px solid #1A4FD0;
+  font-size: 0.9em;
+}

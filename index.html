@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XML Валидатор</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <header class="header">
+    <img src="Trend Agent logo.svg" alt="Логотип компании" class="logo">
+  </header>
+
+  <main class="container">
+    <h1>XML Валидатор</h1>
+
+    <div class="tabs">
+      <button id="tab-url" class="tab active" onclick="switchTab('url')">Ввести ссылку</button>
+      <button id="tab-text" class="tab" onclick="switchTab('text')">Вставить текст</button>
+    </div>
+
+    <div id="content-url" class="tab-content">
+      <input type="text" id="url-input" placeholder="Введите ссылку на XML фид">
+      <button onclick="validateFromURL()">Проверить</button>
+    </div>
+
+    <div id="content-text" class="tab-content" style="display: none;">
+      <textarea id="xml-input" placeholder="Вставьте XML здесь..."></textarea>
+      <button onclick="validateFromText()">Проверить</button>
+    </div>
+
+    <div id="result"></div>
+
+    <table id="tag-table">
+      <thead>
+        <tr>
+          <th>Параметр</th>
+          <th>Найденные теги</th>
+          <th>Дополнительные теги</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div id="info-box" class="info-box" style="display: none;">
+      <h3>Информация</h3>
+      <p id="info-text">Здесь будет полезный текст, который можно вывести при необходимости.</p>
+    </div>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
