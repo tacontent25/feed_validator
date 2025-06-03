@@ -22,19 +22,9 @@ function switchTab(tab) {
   document.getElementById('result').innerHTML = '';
 }
 
-function createCustomTagInputs() {
-  const container = document.getElementById("custom-tags");
-  PARAMS.forEach(p => {
-    const input = document.createElement("input");
-    input.placeholder = `Дополнительные теги для "${p.name}" через запятую`;
-    input.id = `custom-${p.key}`;
-    container.appendChild(input);
-  });
-}
-
 function getTagCandidates(param) {
   const input = document.getElementById(`custom-${param.key}`);
-  const custom = input?.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) || [];
+  const custom = input?.value ? input.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : [];
 
   const presets = {
     object: ["object", "building-name", "building_name", "complex-housing", "complex", "JKSchema"],
@@ -64,15 +54,15 @@ function validateXMLString(xmlStr) {
 
   const namespace = doc.documentElement.namespaceURI || null;
   const allTags = Array.from(doc.getElementsByTagNameNS(namespace, "*"));
-
   const tagInfo = {};
   const issues = [];
-  
-  // Специальная обработка для цен
+
   const priceTags = [];
-  
-  // Сначала обрабатываем все параметры, кроме цен
-  PARAMS.forEach(param => {
+
+  const customPriceFull = document.getElementById("custom-priceFull")?.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) || [];
+  const customPriceBase = document.getElementById("custom-priceBase")?.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) || [];
+
+PARAMS.forEach(param => {
     if (param.key !== "priceFull" && param.key !== "priceBase") {
       const candidates = getTagCandidates(param);
       const tagValuesMap = new Map();
@@ -81,75 +71,65 @@ function validateXMLString(xmlStr) {
         const tagName = el.localName?.toLowerCase();
         if (!tagName) return;
 
-        const matches = candidates.some(c => tagName.toLowerCase() === c.toLowerCase());
+        const rawText = el.textContent?.trim() || "";
+        
+        // Проверяем, есть ли непосредственный тег name внутри (без учета вложенных структур)
+        const hasDirectName = Array.from(el.children).some(
+          child => child.localName?.toLowerCase() === 'name' && !['jkschema', 'house', 'building'].includes(el.localName?.toLowerCase())
+        );
+        
+        // Для object требуем наличие непосредственного name, а не вложенного через JKSchema
+        if (tagName === 'object' && !hasDirectName) return;
+
+        const hasNestedTag = Array.from(el.children).some(
+          child => ['name', 'value', 'title'].includes(child.localName?.toLowerCase())
+        );
+        const hasDirectText = Array.from(el.childNodes).some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim() !== "");
+
+        if (!hasDirectText && !hasNestedTag) return;
+
+        const matches = candidates.some(c => tagName === c.toLowerCase());
+        
         if (matches) {
-          const hasData = 
-            (el.textContent && el.textContent.trim() !== "") ||
-            el.querySelector("name, value, title") !== null;
-
-          if (!hasData) {
-            return;
-          }
-
           let actualTag = tagName;
-          let val = el.textContent.trim().replace(",", ".");
+          let val = rawText.replace(",", ".");
 
-          // Обработка вложенных тегов
-          if (tagName === "value" && el.parentElement) {
-            const parentTag = el.parentElement.localName?.toLowerCase();
-            if (candidates.some(c => parentTag?.includes(c))) {
-              actualTag = parentTag;
-              val = el.parentElement.textContent.trim().replace(",", ".");
-            } else {
-              return;
-            }
-          }
-          
-          if (tagName === "name" && el.parentElement) {
-            const parentTag = el.parentElement.localName?.toLowerCase();
-            if (candidates.some(c => parentTag?.includes(c))) {
-              actualTag = parentTag;
-              val = el.parentElement.textContent.trim().replace(",", ".");
-            } else {
-              return;
+          // Обработка вложенных структур (JKSchema, Building) с Name
+          if (['jkschema', 'building', 'house'].includes(tagName)) {
+            const nameEl = Array.from(el.children).find(
+              child => child.localName?.toLowerCase() === 'name'
+            );
+            if (nameEl) {
+              val = nameEl.textContent?.trim().replace(",", ".") || "";
             }
           }
 
-          if (tagName === "title" && el.parentElement) {
-            const parentTag = el.parentElement.localName?.toLowerCase();
-            if (candidates.some(c => parentTag?.includes(c))) {
-              actualTag = parentTag;
-              val = el.parentElement.textContent.trim().replace(",", ".");
-            } else {
-              return;
-            }
+          if (val && actualTag) {
+            if (!tagValuesMap.has(actualTag)) tagValuesMap.set(actualTag, []);
+            tagValuesMap.get(actualTag).push(val);
           }
-
-          if (!actualTag) return;
-
-          if (!tagValuesMap.has(actualTag)) {
-            tagValuesMap.set(actualTag, []);
-          }
-          tagValuesMap.get(actualTag).push(val);
         }
 
-        // Обработка <custom-field>
+        // Обработка custom-field
         if (tagName === "custom-field") {
-          const nameElement = el.querySelector("name");
-          const valueElement = el.querySelector("value");
+          const nameElement = Array.from(el.children).find(
+            child => child.localName?.toLowerCase() === 'name'
+          );
+          const valueElement = Array.from(el.children).find(
+            child => child.localName?.toLowerCase() === 'value'
+          );
           
-          if (!nameElement || !valueElement || !valueElement.textContent.trim()) return;
+          if (!nameElement || !valueElement) return;
 
           const fieldName = nameElement.textContent.trim().toLowerCase();
-          const matchesCustomField = candidates.some(c => fieldName.includes(c));
+          const rawVal = valueElement.textContent?.trim();
+          if (!rawVal) return;
 
+          const val = rawVal.replace(",", ".");
+          const matchesCustomField = candidates.some(c => fieldName.includes(c.toLowerCase()));
           if (matchesCustomField) {
-            const val = valueElement.textContent.trim().replace(",", ".");
             const actualTag = `custom-field:${fieldName}`;
-
-            if (!tagValuesMap.has(actualTag)) {
-              tagValuesMap.set(actualTag, []);
-            }
+            if (!tagValuesMap.has(actualTag)) tagValuesMap.set(actualTag, []);
             tagValuesMap.get(actualTag).push(val);
           }
         }
@@ -160,17 +140,11 @@ function validateXMLString(xmlStr) {
         const normalized = values.map(v => v.trim().replace(",", "."));
         const numericValues = normalized.map(v => parseFloat(v)).filter(v => !isNaN(v));
         const allBinary = numericValues.length > 0 && numericValues.every(v => v === 0 || v === 1);
-
         const isFlat = param.key === "flat";
         const flatInvalids = normalized.every(v => ["true", "false", ""].includes(v.toLowerCase()));
+        const skip = (numericValues.length > 0 && allBinary) || (isFlat && flatInvalids);
 
-        const skip =
-          (numericValues.length > 0 && allBinary) ||
-          (isFlat && flatInvalids);
-
-        if (!skip && tag) {
-          filteredTags.push(`<${tag}>`);
-        }
+        if (!skip && tag) filteredTags.push(`<${tag}>`);
       });
 
       const clean = [...new Set(filteredTags)].filter(Boolean);
@@ -191,80 +165,125 @@ function validateXMLString(xmlStr) {
     }
   });
 
-  // Теперь обрабатываем цены
+  // Обработка цен
   const priceCandidates = getTagCandidates({ key: "price" });
-  
+
   allTags.forEach(el => {
     const tagName = el.localName?.toLowerCase();
     if (!tagName) return;
 
-    const matches = priceCandidates.some(c => tagName.toLowerCase() === c.toLowerCase());
-    if (matches) {
-      const val = parseFloat(el.textContent.trim().replace(",", "."));
-      if (!isNaN(val)) {
-        priceTags.push({
-          tag: tagName,
-          value: val
-        });
-      }
+    const rawText = el.textContent?.trim();
+    if (!rawText) return;
+
+    const valNum = parseFloat(rawText.replace(",", "."));
+    if (isNaN(valNum)) return;
+
+    if (priceCandidates.includes(tagName)) {
+      priceTags.push({ tag: tagName, value: valNum });
+    }
+    if (customPriceFull.includes(tagName)) {
+      priceTags.push({ tag: tagName, value: valNum, source: "custom-priceFull" });
+    }
+    if (customPriceBase.includes(tagName)) {
+      priceTags.push({ tag: tagName, value: valNum, source: "custom-priceBase" });
     }
 
-    // Обработка custom-field для цен
     if (tagName === "custom-field") {
       const nameElement = el.querySelector("name");
       const valueElement = el.querySelector("value");
-      
-      if (!nameElement || !valueElement || !valueElement.textContent.trim()) return;
+      if (!nameElement || !valueElement) return;
 
       const fieldName = nameElement.textContent.trim().toLowerCase();
-      const matchesCustomField = priceCandidates.some(p => fieldName.includes(p));
+      const rawVal = valueElement.textContent?.trim();
+      if (!rawVal) return;
 
-      if (matchesCustomField) {
-        const val = parseFloat(valueElement.textContent.trim().replace(",", "."));
-        if (!isNaN(val)) {
-          priceTags.push({
-            tag: `custom-field:${fieldName}`,
-            value: val
-          });
-        }
+      const val = parseFloat(rawVal.replace(",", "."));
+      if (isNaN(val)) return;
+
+      if (priceCandidates.includes(fieldName)) {
+        priceTags.push({ tag: `custom-field:${fieldName}`, value: val });
+      }
+      if (customPriceFull.includes(fieldName)) {
+        priceTags.push({ tag: `custom-field:${fieldName}`, value: val, source: "custom-priceFull" });
+      }
+      if (customPriceBase.includes(fieldName)) {
+        priceTags.push({ tag: `custom-field:${fieldName}`, value: val, source: "custom-priceBase" });
       }
     }
   });
-  
-  const uniqueTagNames = [...new Set(priceTags.map(p => p.tag))];  
-  
-  // Логика распределения цен
-  if (uniqueTagNames.length === 0) {
-    issues.push("Не найден обязательный параметр: Цена. Необходимо добавить в фид хотя бы одну цену.");
-    tagInfo["Цена 100%"] = [];
-    tagInfo["Цена базовая"] = [];
-  } else {
-    // Сортируем цены по убыванию
-    priceTags.sort((a, b) => b.value - a.value);
 
-  if (uniqueTagNames.length === 1) {
-    const only = priceTags[0];
-    tagInfo["Цена 100%"] = [`<${only.tag}>`];
-    tagInfo["Цена базовая"] = []; // Не найдено
-  } else if (uniqueTagNames.length > 1) {
-    const basePrice = priceTags[0];
-    tagInfo["Цена базовая"] = [`<${basePrice.tag}>`];
-    const fullPrices = priceTags
-      .filter(p => p.tag !== basePrice.tag)
-      .map(p => `<${p.tag}>`);
-    tagInfo["Цена 100%"] = [...new Set(fullPrices)];
-  }
+// Обновленная обработка цен в функции validateXMLString
+if (priceTags.length === 0) {
+  issues.push("Не найден обязательный параметр: Цена. Необходимо добавить в фид хотя бы одну цену.");
+  tagInfo["Цена 100%"] = [];
+  tagInfo["Цена базовая"] = [];
+} else {
+  const fullPriceTags = priceTags.filter(p => p.source === "custom-priceFull");
+  const basePriceTags = priceTags.filter(p => p.source === "custom-priceBase");
+  const autoPriceTags = priceTags.filter(p => !p.source);
 
-    // Предупреждение, если только одна цена
-    if (uniqueTagNames.length === 1) {
-      issues.push("⚠️ Найдена только одна цена. Если базовая и 100% цена различаются, необходимо добавить в фид обе.");
+  // Получаем уникальные теги из autoPriceTags
+  const uniqueAutoTags = [];
+  const uniqueTagsMap = new Map();
+  
+  autoPriceTags.forEach(p => {
+    if (!uniqueTagsMap.has(p.tag)) {
+      uniqueTagsMap.set(p.tag, p);
+      uniqueAutoTags.push(p);
+    }
+  });
+
+  // Обрабатываем ручные теги (пользовательские)
+  const manualFullTags = [...new Set(fullPriceTags.map(p => `<${p.tag}>`))];
+  const manualBaseTags = [...new Set(basePriceTags.map(p => `<${p.tag}>`))];
+  
+  // Обрабатываем автоматические теги (найденные в фиде)
+  let autoFullTags = [];
+  let autoBaseTags = [];
+  
+  if (uniqueAutoTags.length > 0) {
+    if (uniqueAutoTags.length === 1) {
+      // Только один уникальный тег цены - помещаем в 100%
+      autoFullTags = [`<${uniqueAutoTags[0].tag}>`];
+      autoBaseTags = []; // Базовой цены нет
+    } else {
+      // Несколько уникальных тегов цен - сортируем по убыванию значения
+      const sortedPrices = [...uniqueAutoTags].sort((a, b) => {
+        // Для сортировки берем первое встретившееся значение каждого тега
+        const aValue = autoPriceTags.find(p => p.tag === a.tag)?.value || 0;
+        const bValue = autoPriceTags.find(p => p.tag === b.tag)?.value || 0;
+        return bValue - aValue;
+      });
+      
+      // Базовой ценой становится тег с наибольшим значением
+      autoBaseTags = [`<${sortedPrices[0].tag}>`];
+      
+      // Все остальные уникальные теги (кроме базового) идут в 100% цену
+      autoFullTags = sortedPrices.slice(1)
+        .filter(p => p.tag !== sortedPrices[0].tag) // Исключаем базовый тег
+        .map(p => `<${p.tag}>`);
     }
   }
 
-  let infoMessage = "";
-  if (issues.length != 0) {
-    infoMessage = "Если недостающий тег есть в фиде, но не найден валидатором, то можно добавить его в пользовательские теги перед валидацией и попробовать еще раз.";
+  // Комбинируем ручные и автоматические теги
+  tagInfo["Цена 100%"] = [...manualFullTags, ...autoFullTags];
+  tagInfo["Цена базовая"] = [...manualBaseTags, ...autoBaseTags];
+
+  // Удаляем дубликаты (если пользовательский тег совпал с автоматическим)
+  tagInfo["Цена 100%"] = [...new Set(tagInfo["Цена 100%"])].filter(tag => 
+    !tagInfo["Цена базовая"].includes(tag) // Исключаем теги, которые уже в базовой цене
+  );
+  tagInfo["Цена базовая"] = [...new Set(tagInfo["Цена базовая"])];
+
+  // Проверки и предупреждения
+  if (uniqueAutoTags.length === 1 && manualBaseTags.length === 0 && manualFullTags.length === 0) {
+    issues.push("⚠️ Найдена только одна цена. Если базовая и 100% цена различаются, необходимо добавить в фид обе.");
   }
+}
+
+  const infoMessage = issues.length
+    ? "Если недостающий тег есть в фиде, но не найден валидатором, то можно добавить его в дополнительные теги перед валидацией и попробовать еще раз."
+    : "";
 
   return {
     valid: issues.filter(e => !e.startsWith("⚠️")).length === 0,
@@ -273,6 +292,9 @@ function validateXMLString(xmlStr) {
     infoMessage
   };
 }
+
+
+
 
 function renderTagTable(tagInfo) {
   
@@ -308,6 +330,10 @@ function renderTagTable(tagInfo) {
     input.placeholder = "Дополнительный тег";
     input.className = "custom-input";
     input.id = `custom-${param.key}`;
+    const existingInput = document.getElementById(`custom-${param.key}`);
+    if (existingInput && existingInput.value) {
+      input.value = existingInput.value;
+    }
     td3.appendChild(input);
 
     tr.appendChild(td1);
@@ -370,7 +396,6 @@ function validateAgain() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  createCustomTagInputs;
 
   // отрисовать пустую таблицу до валидации
   const initialEmptyInfo = Object.fromEntries(PARAMS.map(p => [p.name, []]));
