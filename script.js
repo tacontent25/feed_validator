@@ -137,14 +137,15 @@ PARAMS.forEach(param => {
 
       const filteredTags = [];
       tagValuesMap.forEach((values, tag) => {
-        const normalized = values.map(v => v.trim().replace(",", "."));
+        /*const normalized = values.map(v => v.trim().replace(",", "."));
         const numericValues = normalized.map(v => parseFloat(v)).filter(v => !isNaN(v));
         const allBinary = numericValues.length > 0 && numericValues.every(v => v === 0 || v === 1);
         const isFlat = param.key === "flat";
         const flatInvalids = normalized.every(v => ["true", "false", ""].includes(v.toLowerCase()));
         const skip = (numericValues.length > 0 && allBinary) || (isFlat && flatInvalids);
 
-        if (!skip && tag) filteredTags.push(`<${tag}>`);
+        if (!skip && tag) filteredTags.push(`<${tag}>`);*/
+        if (tag) filteredTags.push(`<${tag}>`);
       });
 
       const clean = [...new Set(filteredTags)].filter(Boolean);
@@ -375,18 +376,7 @@ function validateFromText() {
   displayResult(result);
 }
 
-async function validateFromURL() {
-  const url = document.getElementById("url-input").value.trim();
-  try {
-    const response = await fetch('https://xml-proxy.onrender.com/fetch?url=' + encodeURIComponent(url));
-    if (!response.ok) throw new Error("Ошибка загрузки XML");
-    const text = await response.text();
-    const result = validateXMLString(text);
-    displayResult(result);
-  } catch (err) {
-    document.getElementById("result").innerHTML = "❌ Ошибка: " + err.message;
-  }
-}
+
 
 function validateAgain() {
   const xml = document.getElementById("xml-input").value.trim();
@@ -401,3 +391,4 @@ document.addEventListener("DOMContentLoaded", () => {
   const initialEmptyInfo = Object.fromEntries(PARAMS.map(p => [p.name, []]));
   renderTagTable(initialEmptyInfo);
 });
+
