@@ -14,18 +14,8 @@
 
   <main class="container">
     <h1>XML Валидатор</h1>
-
-    <div class="tabs">
-      <button id="tab-url" class="tab active" onclick="switchTab('url')">Ввести ссылку</button>
-      <button id="tab-text" class="tab" onclick="switchTab('text')">Вставить текст</button>
-    </div>
-
-    <div id="content-url" class="tab-content">
-      <input type="text" id="url-input" placeholder="Введите ссылку на XML фид">
-      <button onclick="validateFromURL()">Проверить</button>
-    </div>
-
-    <div id="content-text" class="tab-content" style="display: none;">
+    <div class="description-text">На этой странице вы можете проверить свой XML файл на соответствие требованиям для передачи актуальной информации на TrendAgent.<br><b>Важно!</b> Валидатор проверяет наличие необходимых тегов но не проверяет их содержимое, поэтому даже при валидном XML, фид может не подойти из-за некорректного наполнения. Это выявляется только при ручной проверке перед обработкой источника.</div>
+    <div id="content-text" class="tab-content">
       <textarea id="xml-input" placeholder="Вставьте XML здесь..."></textarea>
       <button onclick="validateFromText()">Проверить</button>
     </div>
@@ -42,11 +32,6 @@
       </thead>
       <tbody></tbody>
     </table>
-
-    <div id="info-box" class="info-box" style="display: none;">
-      <h3>Информация</h3>
-      <p id="info-text">Здесь будет полезный текст, который можно вывести при необходимости.</p>
-    </div>
   </main>
 
   <script src="script.js"></script>
