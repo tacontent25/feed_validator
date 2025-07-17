@@ -59,11 +59,12 @@ function validateXMLString(xmlStr) {
 
   const priceTags = [];
 
+  const customPriceTags = document.getElementById("custom-price")?.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) || [];
   const customPriceFull = document.getElementById("custom-priceFull")?.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) || [];
   const customPriceBase = document.getElementById("custom-priceBase")?.value.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) || [];
 
-PARAMS.forEach(param => {
-    if (param.key !== "priceFull" && param.key !== "priceBase") {
+  PARAMS.forEach(param => {
+    if (param.key !== "price" && param.key !== "priceFull" && param.key !== "priceBase") {
       const candidates = getTagCandidates(param);
       const tagValuesMap = new Map();
 
@@ -167,7 +168,7 @@ PARAMS.forEach(param => {
   });
 
   // Обработка цен
-  const priceCandidates = getTagCandidates({ key: "price" });
+  const priceCandidates = [...getTagCandidates({ key: "price" }), ...customPriceTags];
 
   allTags.forEach(el => {
     const tagName = el.localName?.toLowerCase();
@@ -293,15 +294,10 @@ if (priceTags.length === 0) {
     infoMessage
   };
 }
-
-
-
-
 function renderTagTable(tagInfo) {
-  
   const tbody = document.querySelector("#tag-table tbody");
   tbody.innerHTML = "";
-
+  
   PARAMS.forEach(param => {
     // Пропускаем параметр "Цена", так как он используется только для поиска
     if (param.key === "price") return;
@@ -376,8 +372,6 @@ function validateFromText() {
   displayResult(result);
 }
 
-
-
 function validateAgain() {
   const xml = document.getElementById("xml-input").value.trim();
   if (!xml) return alert("Сначала вставьте XML");
@@ -386,7 +380,6 @@ function validateAgain() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-
   // отрисовать пустую таблицу до валидации
   const initialEmptyInfo = Object.fromEntries(PARAMS.map(p => [p.name, []]));
   renderTagTable(initialEmptyInfo);
