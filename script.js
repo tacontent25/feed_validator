@@ -49,7 +49,27 @@ function validateXMLString(xmlStr) {
   const errors = doc.getElementsByTagName("parsererror");
 
   if (errors.length > 0) {
-    return { valid: false, errors: ["Синтаксическая ошибка в XML"], tagInfo: {} };
+    // Получаем текст ошибки парсера
+    const errorText = errors[0].textContent;
+    
+    // Анализируем распространенные ошибки
+    let detailedError = "Общая синтаксическая ошибка в XML";
+    
+    if (errorText.includes("xmlParseEntityRef: no name")) {
+      detailedError = "Найден неэкранированный символ '&' - нужно заменить на '&amp;'";
+    } else if (errorText.includes("XML declaration allowed only at the start")) {
+      detailedError = "XML-декларация <?xml ?> должна быть в самом начале файла";
+    } else if (errorText.includes("Unencoded")) {
+      detailedError = "Обнаружены неэкранированные спецсимволы - проверьте <, >, &, ' и \"";
+    } else if (errorText.includes("prefix") && errorText.includes("not bound")) {
+      detailedError = "Не объявлен namespace (xmlns) для префикса";
+    }
+    
+    return { 
+      valid: false, 
+      errors: [`❌ Ошибка парсинга XML: ${detailedError}`], 
+      tagInfo: {} 
+    };
   }
 
   const namespace = doc.documentElement.namespaceURI || null;
@@ -294,10 +314,15 @@ if (priceTags.length === 0) {
     infoMessage
   };
 }
+
+
+
+
 function renderTagTable(tagInfo) {
+  
   const tbody = document.querySelector("#tag-table tbody");
   tbody.innerHTML = "";
-  
+
   PARAMS.forEach(param => {
     // Пропускаем параметр "Цена", так как он используется только для поиска
     if (param.key === "price") return;
@@ -347,8 +372,26 @@ function displayResult(result) {
 
   let html = "";
   // Ошибки
-  if (errors.length > 0) {
-    html += "❌ Ошибки:<ul>" + errors.map(e => `<li>${e}</li>`).join("") + "</ul>";
+  if (result.errors.length > 0) {
+    // Для ошибок парсинга выводим более подробное сообщение
+    if (result.errors.some(e => e.includes("Ошибка парсинга XML"))) {
+      html += `<div class="error-box">
+                <p>${result.errors[0]}</p>
+                <div class="error-tip">
+                  <strong>Как исправить:</strong>
+                  <ul>
+                    <li>Проверьте, что XML начинается с декларации &lt;?xml version="1.0"?&gt;</li>
+                    <li>Замените все символы &amp; на &amp;amp;</li>
+                    <li>Убедитесь, что все теги правильно закрыты</li>
+                  </ul>
+                </div>
+              </div>`;
+    }
+    else{
+      if (errors.length > 0) {
+        html += "❌ Ошибки:<ul>" + errors.map(e => `<li>${e}</li>`).join("") + "</ul>";
+      }
+    }
   }
   // Предупреждения
   if (warnings.length > 0) {
@@ -372,6 +415,8 @@ function validateFromText() {
   displayResult(result);
 }
 
+
+
 function validateAgain() {
   const xml = document.getElementById("xml-input").value.trim();
   if (!xml) return alert("Сначала вставьте XML");
@@ -380,8 +425,8 @@ function validateAgain() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+
   // отрисовать пустую таблицу до валидации
   const initialEmptyInfo = Object.fromEntries(PARAMS.map(p => [p.name, []]));
   renderTagTable(initialEmptyInfo);
 });
-
